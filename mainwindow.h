@@ -11,6 +11,9 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
+const QString APP_NAME("GeoPackage to PostgreSQL GUI");
+const QString APP_SIMPLE_NAME("gpkg2pgsql");
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT

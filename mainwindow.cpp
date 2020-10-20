@@ -8,9 +8,6 @@
 #include <QProcess>
 #include <QSqlError>
 
-const QString APP_NAME("GeoPackage to PostgreSQL GUI");
-const QString APP_SIMPLE_NAME("gpkg2pgsql");
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -44,7 +41,7 @@ void MainWindow::initUi()
 
     ui->tw_files->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    statusBar()->showMessage("Ready");
+    statusBar()->showMessage(tr("Ready"));
 }
 
 void MainWindow::setupSignals()
@@ -68,6 +65,9 @@ void MainWindow::alert(const QString &title, const QString &text, QMessageBox::I
     msgBox.setIcon(icon);
     msgBox.setText(text);
     msgBox.exec();
+
+    if (!writeToLog) return;
+
     LogLevel level;
     switch (icon) {
     case QMessageBox::Warning:
@@ -80,8 +80,7 @@ void MainWindow::alert(const QString &title, const QString &text, QMessageBox::I
         level=INFO;
         break;
     }
-
-    if (writeToLog) writeLog(text, level);
+    writeLog(text, level);
 }
 
 void MainWindow::writeLog(const QString &message, LogLevel level)
@@ -99,6 +98,7 @@ void MainWindow::writeLog(const QString &message, LogLevel level)
         break;
     default:
         lvl = QString("INFO");
+        break;
     }
     writeRawLog(QString("[%1]: %2").arg(lvl).arg(message));
 }
@@ -113,7 +113,7 @@ void MainWindow::writeRawLog(const QString &message)
 void MainWindow::addFiles()
 {
     QString lastDir = settings->value("LastDir", QDir::homePath()).toString();
-    QStringList fileNames = QFileDialog::getOpenFileNames(this,"Add GPKG file(s)", lastDir, "GPKG (*.gpkg)");
+    QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Add GPKG file(s)"), lastDir, "GPKG (*.gpkg)");
 
     int rowCount = ui->tw_files->rowCount();
 
@@ -168,7 +168,7 @@ void MainWindow::clearFiles()
 {
     if (ui->tw_files->rowCount() < 1) return;
 
-    if (QMessageBox::question(this, "Clear Files", "Are you sure want to clear files?") == QMessageBox::Yes) {
+    if (QMessageBox::question(this, tr("Clear Files"), tr("Are you sure want to clear files?")) == QMessageBox::Yes) {
         ui->tw_files->clearContents();
         ui->tw_files->setRowCount(0);
         ui->tw_files->resizeColumnsToContents();
@@ -181,17 +181,17 @@ void MainWindow::connectDb()
 
     if (db.isOpen()) {
         db.close();
-        ui->btn_connect->setText("Connect");
+        ui->btn_connect->setText(tr("Connect"));
         foreach (QLineEdit *lineEdit, lineEdits) {
             lineEdit->setEnabled(true);
         }
-        writeLog("Databse disconnected.");
+        writeLog(tr("Databse disconnected."));
         return;
     }
 
     QString dbName = ui->le_database->text();
     if (dbName.isEmpty()) {
-        alert("Error", "Database name is required", QMessageBox::Critical);
+        alert(tr("Error"), tr("Database name is required"), QMessageBox::Critical);
         ui->le_database->setFocus();
         return;
     }
@@ -217,28 +217,28 @@ void MainWindow::connectDb()
     db.open();
 
     if (db.isOpen()) {
-        writeLog("Database connected.");
+        writeLog(tr("Database connected."));
         foreach (QLineEdit *lineEdit, lineEdits) {
             lineEdit->setDisabled(true);
         }
-        ui->btn_connect->setText("Disconnect");
+        ui->btn_connect->setText(tr("Disconnect"));
     } else {
         writeLog(db.lastError().text(), ERROR);
-        alert("Error", "Could not connect to database.", QMessageBox::Critical);
+        alert(tr("Error"), tr("Could not connect to database."), QMessageBox::Critical);
     }
 }
 
 void MainWindow::process()
 {
     if (!db.isOpen()) {
-        alert("Error", "Database not connected.", QMessageBox::Critical);
+        alert(tr("Error"), tr("Database not connected."), QMessageBox::Critical);
         return;
     }
 
 
     int rowCount = ui->tw_files->rowCount();
     if (rowCount < 1) {
-        alert("Error", "No file available.", QMessageBox::Critical);
+        alert(tr("Error"), tr("No file available."), QMessageBox::Critical);
         return;
     }
 
@@ -279,17 +279,17 @@ void MainWindow::process()
         args << fileName;
 
         writeRawLog("\n==========");
-        writeLog("Processing " + fileName);
+        writeLog(QString(tr("Processing %1.")).arg(fileName));
 
         try {
             proc->start("ogr2ogr", args);
 
             if (proc->waitForFinished() && proc->exitCode() == 0) {
                 successRows.append(row);
-                writeLog("Done processing " + fileName);
+                writeLog(QString(tr("Done processing %1.")).arg(fileName));
             } else {
                 errors << fileName;
-                writeLog("Error processing " + fileName, ERROR);
+                writeLog(QString(tr("Error processing %1.")).arg(fileName), ERROR);
             }
 
             QString output(proc->readAll());
@@ -297,7 +297,7 @@ void MainWindow::process()
                 writeRawLog(QString("[OUTPUT]: %1").arg(output));
         } catch (...) {
             errors << fileName;
-            writeLog("Error processing " + fileName, ERROR);
+            writeLog(QString(tr("Error processing %1.")).arg(fileName), ERROR);
         }
         writeRawLog("==========");
     }
@@ -311,13 +311,13 @@ void MainWindow::process()
     ui->tw_files->resizeColumnsToContents();
 
     if (errors.count() > 0) {
-        alert("Warning", "There are some errors when processing files.\nCheck log for details.", QMessageBox::Warning, false);
+        alert(tr("Warning"), tr("There are some errors when processing files.\nCheck log for details."), QMessageBox::Warning, false);
     }
 }
 
 void MainWindow::showAbout()
 {
-    QMessageBox::about(this, "About", QString("<h3>%1</h3><p>Import GPKG files into PostgreSQL database.</p>").arg(APP_NAME));
+    QMessageBox::about(this, tr("About"), QString(tr("<h3>%1</h3><p>Import GPKG files into PostgreSQL database.</p>")).arg(APP_NAME));
 }
 
 void MainWindow::showFileMenu(const QPoint &pos)
@@ -326,7 +326,7 @@ void MainWindow::showFileMenu(const QPoint &pos)
     if (!item) return;
     ui->tw_files->selectRow(item->row());
     QMenu menu(ui->tw_files);
-    QAction *removeAction = menu.addAction("Remove");
+    QAction *removeAction = menu.addAction(tr("Remove"));
     QAction *action = menu.exec(ui->tw_files->mapToGlobal(pos));
     if (action == removeAction) {
         ui->tw_files->removeRow(item->row());
@@ -338,10 +338,10 @@ void MainWindow::toggleLog()
 {
     if (ui->gb_log->isVisible()) {
         ui->gb_log->hide();
-        ui->btn_toggle_log->setText("Show Log");
+        ui->btn_toggle_log->setText(tr("Show Log"));
     } else {
         ui->gb_log->show();
-        ui->btn_toggle_log->setText("Hide Log");
+        ui->btn_toggle_log->setText(tr("Hide Log"));
     }
 }
 
@@ -349,10 +349,10 @@ void MainWindow::saveLog()
 {
     QString log = ui->te_log->toPlainText();
     if (log.isEmpty())
-        return alert("Error", "Log is empty", QMessageBox::Critical, false);
+        return alert(tr("Error"), tr("Log is empty"), QMessageBox::Critical, false);
 
     QString lastSaveDir = settings->value("LastSaveDir", QDir::homePath()).toString();
-    QString logFilePath = QFileDialog::getSaveFileName(this, "Save As", lastSaveDir, "Text files (*.log *.txt);;All Files (*.*)");
+    QString logFilePath = QFileDialog::getSaveFileName(this, tr("Save As"), lastSaveDir, QString("%1 (*.log *.txt);;%2 (*.*)").arg(tr("Text files")).arg(tr("All Files")));
 
     if (logFilePath.isEmpty()) return;
 
@@ -364,9 +364,9 @@ void MainWindow::saveLog()
     if (logFile.open(QIODevice::WriteOnly)) {
         logFile.write(log.toUtf8());
         logFile.close();
-        alert("Success", "Logs successfully saved to " + logFilePath, QMessageBox::Information, false);
+        alert(tr("Success"), QString(tr("Logs successfully saved to %1.")).arg(logFilePath), QMessageBox::Information, false);
     } else {
-        alert("Error", logFilePath + " is not writeable.", QMessageBox::Critical, false);
+        alert(tr("Error"), QString(tr("%1 is not writeable.")).arg(logFilePath), QMessageBox::Critical, false);
     }
 }
 
@@ -377,7 +377,7 @@ void MainWindow::writeSettings()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (QMessageBox::question(this, "Exit", "Are you sure want to exit?") == QMessageBox::Yes) {
+    if (QMessageBox::question(this, tr("Exit"), tr("Are you sure want to exit?")) == QMessageBox::Yes) {
         writeSettings();
         event->accept();
     } else {

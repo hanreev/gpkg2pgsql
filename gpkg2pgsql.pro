@@ -33,6 +33,8 @@ Debug:runtime.files += runtime_debug/*
 
 INSTALLS += target runtime
 
+TRANSLATIONS += gpkg2pgsql_id.ts
+
 RESOURCES += \
     resources.qrc
 

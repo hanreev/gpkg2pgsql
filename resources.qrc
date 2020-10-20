@@ -2,4 +2,7 @@
     <qresource prefix="/images">
         <file>gpkg2pgsql.png</file>
     </qresource>
+    <qresource prefix="/i18n">
+        <file>gpkg2pgsql_id.qm</file>
+    </qresource>
 </RCC>
